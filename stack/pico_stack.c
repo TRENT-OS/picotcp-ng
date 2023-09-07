@@ -59,7 +59,6 @@
 #include "pico_hotplug_detection.h"
 #include "heap.h"
 #include "pico_jobs.h"
-
 /* Globals (common to all instances) */
 PICO_THREAD_LOCAL volatile pico_err_t pico_err;
 
@@ -70,6 +69,26 @@ PICO_THREAD_LOCAL volatile pico_err_t pico_err;
 #   define MOCKABLE
 #endif
 
+
+/* Globals across multiple instances */
+volatile pico_time pico_tick;
+static uint32_t _rand_seed;
+
+void WEAK pico_rand_feed(uint32_t feed)
+{
+    if (!feed)
+        return;
+
+    _rand_seed *= 1664525;
+    _rand_seed += 1013904223;
+    _rand_seed ^= ~(feed);
+}
+
+uint32_t WEAK pico_rand(void)
+{
+    pico_rand_feed(PICO_TIME_MS());
+    return _rand_seed;
+}
 
 void pico_to_lowercase(char *str)
 {

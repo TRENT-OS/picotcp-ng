@@ -100,33 +100,34 @@ add_library(${PROJECT_NAME}
         stack/pico_socket_multicast.c
         stack/pico_tree.c
         stack/pico_md5.c
+        stack/pico_jobs.c
 
-        modules/pico_aodv.c
+        #modules/pico_aodv.c
         modules/pico_arp.c
         modules/pico_dev_loop.c
-        modules/pico_dev_ppp.c
+        #modules/pico_dev_ppp.c
         modules/pico_dhcp_client.c
         modules/pico_dhcp_common.c
-        modules/pico_dhcp_server.c
+        #modules/pico_dhcp_server.c
         modules/pico_dns_client.c
         modules/pico_dns_common.c
-        modules/pico_dns_sd.c
+        #modules/pico_dns_sd.c
         modules/pico_ethernet.c
         modules/pico_fragments.c
         modules/pico_hotplug_detection.c
         modules/pico_icmp4.c
-        modules/pico_icmp6.c
-        modules/pico_igmp.c
-        modules/pico_ipfilter.c
+        #modules/pico_icmp6.c
+        #modules/pico_igmp.c
+        #modules/pico_ipfilter.c
         modules/pico_ipv4.c
-        modules/pico_ipv6_nd.c
-        modules/pico_ipv6.c
-        modules/pico_mcast.c
-        modules/pico_mdns.c
-        modules/pico_mld.c
-        modules/pico_nat.c
-        modules/pico_slaacv4.c
-        modules/pico_sntp_client.c
+        #modules/pico_ipv6_nd.c
+        #modules/pico_ipv6.c
+        #modules/pico_mcast.c
+        #modules/pico_mdns.c
+        #modules/pico_mld.c
+        #modules/pico_nat.c
+        #modules/pico_slaacv4.c
+        #modules/pico_sntp_client.c
         modules/pico_socket_tcp.c
         modules/pico_socket_udp.c
         modules/pico_strings.c
