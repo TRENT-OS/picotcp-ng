@@ -71,27 +71,20 @@
 
 
 #ifdef PICO_SUPPORT_TCP
-#ifdef DEBUG_TCP_GENERAL
+
+
 #define tcp_dbg              dbg
-#else
-#define tcp_dbg(...)         do {} while(0)
-#endif
 
-#ifdef DEBUG_TCP_NAGLE
 #define tcp_dbg_nagle        dbg
-#else
-#define tcp_dbg_nagle(...)   do {} while(0)
-#endif
 
-#ifdef DEBUG_TCP_OPTIONS
 #define tcp_dbg_options      dbg
-#else
-#define tcp_dbg_options(...) do {} while(0)
-#endif
+
+#define dbg Debug_LOG_DEBUG
 
 #ifdef PICO_SUPPORT_MUTEX
 static void *Mutex = NULL;
 #endif
+
 
 
 
@@ -203,7 +196,6 @@ static uint16_t enqueue_segment_len(struct pico_tcp_queue *tq, void *f)
         return (uint16_t)(((struct pico_frame *)f)->buffer_len);
     }
 }
-
 
 static int32_t do_enqueue_segment(struct pico_tcp_queue *tq, void *f, uint16_t payload_len)
 {
@@ -900,8 +892,12 @@ static int tcp_parse_options(struct pico_frame *f)
     uint32_t i = 0;
     f->timestamp = 0;
 
-    if (f->buffer + f->buffer_len > f->transport_hdr + f->transport_len)
+    if (f->buffer + f->buffer_len > f->transport_hdr + f->transport_len) {
+        tcp_dbg("hdr len is not correct");
+        tcp_dbg("f->buffer + f->buffer_len (%zu) > f-transport_hdr + f->transport_len(%zu)", f->buffer + f->buffer_len, f->transport_hdr + f->transport_len);
+        tcp_dbg("f->buffer: %zu f->buffer_len: %zu\nf-transport_hdr: %zu f->transport_len: %zu", f->buffer, f->buffer_len, f->transport_hdr, f->transport_len);
         return -1;
+    }
 
     while (i < (f->transport_len - PICO_SIZE_TCPHDR)) {
         uint8_t type =  opt[i++];
@@ -915,6 +911,7 @@ static int tcp_parse_options(struct pico_frame *f)
             break;
 
         if (len == 0) {
+            tcp_dbg("len == 0");
             return -1;
         }
 
@@ -1147,6 +1144,7 @@ static uint32_t tcp_read_finish(struct pico_socket *s, uint32_t tot_rd_len)
         s->state |= PICO_SOCKET_STATE_TCP_CLOSE_WAIT;
         /* set SHUT_REMOTE */
         s->state |= PICO_SOCKET_STATE_SHUT_REMOTE;
+        Debug_LOG_DEBUG("Set State to: PICO_SOCKET_STATE_SHUT_REMOTE");
         if (s->wakeup) {
             s->wakeup(PICO_SOCK_EV_CLOSE, s);
         }
@@ -2371,6 +2369,7 @@ static int tcp_finwaitfin(struct pico_socket *s, struct pico_frame *f)
     s->state |= PICO_SOCKET_STATE_TCP_TIME_WAIT;
     /* set SHUT_REMOTE */
     s->state |= PICO_SOCKET_STATE_SHUT_REMOTE;
+    Debug_LOG_DEBUG("Set State to: PICO_SOCKET_STATE_SHUT_REMOTE");
     if (s->wakeup)
         s->wakeup(PICO_SOCK_EV_CLOSE, s);
 
@@ -2425,16 +2424,21 @@ static int tcp_lastackwait(struct pico_socket *s, struct pico_frame *f)
 
 static int tcp_syn(struct pico_socket *s, struct pico_frame *f)
 {
+    tcp_dbg("HEEEERE!");
     struct pico_socket_tcp *new = NULL;
     struct pico_tcp_hdr *hdr = NULL;
     uint16_t mtu;
-    if(s->number_of_pending_conn >= s->max_backlog)
+    if(s->number_of_pending_conn >= s->max_backlog) {
+        tcp_dbg("return -> backlog");
         return -1;
+    }
 
     new = (struct pico_socket_tcp *)pico_socket_clone(s);
     hdr = (struct pico_tcp_hdr *)f->transport_hdr;
-    if (!new)
+    if (!new) {
+        tcp_dbg("return not new con");
         return -1;
+    }
 
 #ifdef PICO_TCP_SUPPORT_SOCKET_STATS
     if (!pico_timer_add(t->sock.stack, 2000, sock_stats, s)) {
@@ -2464,8 +2468,10 @@ static int tcp_syn(struct pico_socket *s, struct pico_frame *f)
         new->mss = (uint16_t)(mtu - PICO_SIZE_TCPHDR);
     else
         new->mss = PICO_TCP_MIN_MSS;
-    if (tcp_parse_options(f) < 0)
+    if (tcp_parse_options(f) < 0) {
+        tcp_dbg("failed to parse options");
         return -1;
+    }
     new->sock.stack = s->stack;
     new->tcpq_in.max_size = PICO_DEFAULT_SOCKETQ;
     new->tcpq_out.max_size = PICO_DEFAULT_SOCKETQ;
@@ -2491,6 +2497,7 @@ static int tcp_syn(struct pico_socket *s, struct pico_frame *f)
 
 static int tcp_synrecv_syn(struct pico_socket *s, struct pico_frame *f)
 {
+    //tcp_dbg("HEEEERE!");
     struct pico_tcp_hdr *hdr = NULL;
     struct pico_socket_tcp *t = TCP_SOCK(s);
     hdr = (struct pico_tcp_hdr *)f->transport_hdr;
@@ -2608,13 +2615,14 @@ static void tcp_attempt_closewait(struct pico_socket *s, struct pico_frame *f)
         t->rcv_nxt = long_be(hdr->seq) + 1;
         if (pico_seq_compare(SEQN(f), t->rcv_processed) == 0) {
             if ((s->state & PICO_SOCKET_STATE_TCP) == PICO_SOCKET_STATE_TCP_ESTABLISHED) {
-                tcp_dbg("Changing state to CLOSE_WAIT\n");
+                Debug_LOG_DEBUG("Changing state to CLOSE_WAIT");
                 s->state &= 0x00FFU;
                 s->state |= PICO_SOCKET_STATE_TCP_CLOSE_WAIT;
             }
 
             /* set SHUT_REMOTE */
             s->state |= PICO_SOCKET_STATE_SHUT_REMOTE;
+            Debug_LOG_DEBUG("Set State to: PICO_SOCKET_STATE_SHUT_REMOTE");
             tcp_dbg("TCP> Close-wait\n");
             if (s->wakeup) {
                 s->wakeup(PICO_SOCK_EV_CLOSE, s);
@@ -2689,6 +2697,7 @@ static int tcp_finack(struct pico_socket *s, struct pico_frame *f)
     s->state |= PICO_SOCKET_STATE_TCP_TIME_WAIT;
     /* set SHUT_REMOTE */
     s->state |= PICO_SOCKET_STATE_SHUT_REMOTE;
+    Debug_LOG_DEBUG("Set State to: PICO_SOCKET_STATE_SHUT_REMOTE");
 
     tcp_linger(t);
 
@@ -2881,9 +2890,9 @@ int pico_tcp_input(struct pico_socket *s, struct pico_frame *f)
     f->payload = (f->transport_hdr + ((hdr->len & 0xf0u) >> 2u));
     f->payload_len = (uint16_t)(f->transport_len - ((hdr->len & 0xf0u) >> 2u));
 
-    tcp_dbg("[sam] TCP> [tcp input] t_len: %u\n", f->transport_len);
-    tcp_dbg("[sam] TCP> flags = 0x%02x\n", hdr->flags);
-    tcp_dbg("[sam] TCP> s->state >> 8 = %u\n", s->state >> 8);
+    tcp_dbg("[sam] TCP> [tcp input] t_len: %u", f->transport_len);
+    tcp_dbg("[sam] TCP> flags = 0x%02x", hdr->flags);
+    tcp_dbg("[sam] TCP> s->state >> 8 = %u", s->state >> 8);
     tcp_dbg("[sam] TCP> [tcp input] socket: %p state: %d <-- local port:%u remote port: %u seq: 0x%08x ack: 0x%08x flags: 0x%02x t_len: %u, hdr: %u payload: %d\n", s, s->state >> 8, short_be(hdr->trans.dport), short_be(hdr->trans.sport), SEQN(f), ACKN(f), hdr->flags, f->transport_len, (hdr->len & 0xf0) >> 2, f->payload_len );
 
     if ((f->payload + f->payload_len) > (f->buffer + f->buffer_len)) {
@@ -2897,20 +2906,26 @@ int pico_tcp_input(struct pico_socket *s, struct pico_frame *f)
     s->timestamp = TCP_TIME;
     /* Those are not supported at this time. */
     /* flags &= (uint8_t) ~(PICO_TCP_CWR | PICO_TCP_URG | PICO_TCP_ECN); */
+    tcp_dbg("HERE!");
     if(invalid_flags(s, flags)) {
+        tcp_dbg("HERE!1");
         pico_tcp_reply_rst(s->stack, f);
     }
     else if (flags == PICO_TCP_SYN) {
+        tcp_dbg("HERE!2");
         tcp_action_call(action->syn, s, f);
     } else if (flags == (PICO_TCP_SYN | PICO_TCP_ACK)) {
+        tcp_dbg("HERE!3");
         tcp_action_call(action->synack, s, f);
     } else {
+        tcp_dbg("HERE!4");
         ret = tcp_action_by_flags(action, s, f, flags);
     }
 
     if (s->ev_pending)
         tcp_wakeup_pending(s, s->ev_pending);
 
+    tcp_dbg("HERE!5");
 /* discard: */
     pico_frame_discard(f);
     return ret;

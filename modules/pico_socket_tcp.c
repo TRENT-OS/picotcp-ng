@@ -278,6 +278,7 @@ int pico_socket_tcp_read(struct pico_socket *s, void *buf, uint32_t len)
     /* check if in shutdown state and if no more data in tcpq_in */
     if ((s->state & PICO_SOCKET_STATE_SHUT_REMOTE) && pico_tcp_queue_in_is_empty(s)) {
         pico_err = PICO_ERR_ESHUTDOWN;
+        Debug_LOG_DEBUG("PICO_ERR_ESHUTDOWN");
         return -1;
     } else {
         return (int)(pico_tcp_read(s, buf, (uint32_t)len));

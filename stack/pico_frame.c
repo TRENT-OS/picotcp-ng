@@ -120,7 +120,6 @@ static struct pico_frame *pico_frame_do_alloc(uint32_t size, int zerocopy, int e
             return NULL;
         }
     }
-
     p->buffer_len = size;
 
     /* By default, frame content is the full buffer. */
@@ -136,10 +135,10 @@ static struct pico_frame *pico_frame_do_alloc(uint32_t size, int zerocopy, int e
     if (ext_buffer)
         p->flags |= PICO_FRAME_FLAG_EXT_BUFFER;
 
-#ifdef PICO_SUPPORT_DEBUG_MEMORY
+
     dbg("Allocated buffer @%p, len= %d caller: %p\n", p->buffer, p->buffer_len, __builtin_return_address(2));
     dbg("DEBUG MEMORY: %d frames in use.\n", ++n_frames_allocated);
-#endif
+
     return p;
 }
 

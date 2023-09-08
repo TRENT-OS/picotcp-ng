@@ -806,6 +806,7 @@ static int pico_socket_write_check_state(struct pico_socket *s)
     }
 
     if (s->state & PICO_SOCKET_STATE_SHUT_LOCAL) { /* check if in shutdown state */
+        dbg("PICO_ERR_ESHUTDOWN");
         pico_err = PICO_ERR_ESHUTDOWN;
         return -1;
     }
@@ -1568,6 +1569,7 @@ int pico_socket_recvfrom_extended(struct pico_socket *s, void *buf, int len, voi
         /* check if in shutdown state and if tcpq_in empty */
         if ((s->state & PICO_SOCKET_STATE_SHUT_REMOTE) && pico_tcp_queue_in_is_empty(s)) {
             pico_err = PICO_ERR_ESHUTDOWN;
+            dbg("PICO_ERR_ESHUTDOWN");
             return -1;
         } else {
             /* dbg("socket tcp recv\n"); */
@@ -2079,6 +2081,7 @@ int pico_socket_shutdown(struct pico_socket *s, int mode)
     if (PROTO(s) == PICO_PROTO_TCP) {
         if ((mode & PICO_SHUT_RDWR) == PICO_SHUT_RDWR)
         {
+            dbg("Set State to: PICO_SOCKET_STATE_SHUT_REMOTE");
             pico_socket_alter_state(s, PICO_SOCKET_STATE_SHUT_LOCAL | PICO_SOCKET_STATE_SHUT_REMOTE, 0, 0);
             pico_tcp_notify_closing(s);
         }
@@ -2252,9 +2255,11 @@ int pico_transport_process_in(struct pico_stack *S, struct pico_protocol *self, 
     else
         ret = 0;
 
+    //TODO: Make this easier and push {
+    //hdr check is useless
     if ((hdr) && (pico_socket_deliver(S, self, f, hdr->dport) == 0))
         return ret;
-
+    //}
     if (!IS_BCAST(f)) {
         dbg("Socket not found... \n");
         pico_notify_socket_unreachable(S, f);
@@ -2540,6 +2545,7 @@ int pico_transport_error(struct pico_stack *S, struct pico_frame *f, uint8_t pro
                 if (s->wakeup) {
                     pico_transport_error_set_picoerr(code);
                     s->state |= PICO_SOCKET_STATE_SHUT_REMOTE;
+                    dbg("Set State to: PICO_SOCKET_STATE_SHUT_REMOTE");
                     s->wakeup(PICO_SOCK_EV_ERR, s);
                 }
 
