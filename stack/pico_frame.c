@@ -39,7 +39,7 @@ static int n_frames_allocated;
 /** frame alloc/dealloc/copy **/
 void pico_frame_discard(struct pico_frame *f)
 {
-    if (!f)
+    if (!f) 
         return;
 
     (*f->usage_count)--;

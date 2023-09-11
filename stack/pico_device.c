@@ -361,21 +361,29 @@ static int devloop_sendto_dev(struct pico_device *dev, struct pico_frame *f)
 static int devloop_out(struct pico_device *dev, int loop_score)
 {
     struct pico_frame *f;
+    Debug_LOG_DEBUG("HERE! Loop Score: %zu", loop_score);
     while(loop_score > 0) {
-        if (dev->q_out->frames == 0)
+        if (dev->q_out->frames == 0) {
+            Debug_LOG_DEBUG("No frames in queue reported!");
             break;
-
+        }
+        
         /* Device dequeue + send */
         f = pico_queue_peek(dev->q_out);
-        if (!f)
+        if (!f) {
+            Debug_LOG_DEBUG("f is NULL");
             break;
+        }
 
         if (devloop_sendto_dev(dev, f) == 0) { /* success. */
-            f = pico_dequeue(dev->q_out);
+            Debug_LOG_DEBUG("Sending Packet to device");
+            f = pico_dequeue_out(dev->q_out);
             pico_frame_discard(f); /* SINGLE POINT OF DISCARD for OUTGOING FRAMES */
             loop_score--;
-        } else 
+        } else {
+            Debug_LOG_DEBUG("Somehow sending to device failed!");
             break; /* Don't discard */
+        }
     }
 
     return loop_score;
@@ -398,7 +406,7 @@ static void devloop_all_out(struct pico_stack *S, void *arg)
             break;
 
         if (devloop_sendto_dev(dev, f) == 0) { /* success. */
-            f = pico_dequeue(dev->q_out);
+            f = pico_dequeue_out(dev->q_out);
             pico_frame_discard(f); /* SINGLE POINT OF DISCARD for OUTGOING FRAMES */
         } else {
             pico_schedule_job(dev->stack, devloop_all_out, dev);
@@ -439,12 +447,14 @@ static int devloop(struct pico_device *dev, int loop_score, int direction)
     /* If device supports polling, give control. Loop score is managed internally,
      * remaining loop points are returned. */
     loop_score = check_dev_serve_polling(dev, loop_score);
-
-    if (direction == PICO_LOOP_DIR_OUT)
+    //Debug_LOG_DEBUG("Looping");
+    if (direction == PICO_LOOP_DIR_OUT) {
         loop_score = devloop_out(dev, loop_score);
-    else
+        Debug_LOG_DEBUG("Loop out, loop score: %zu");
+    } else {
+        Debug_LOG_DEBUG("Loop in, loop score: %zu");
         loop_score = devloop_in(dev, loop_score);
-
+    }
     return loop_score;
 }
 

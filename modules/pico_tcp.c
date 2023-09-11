@@ -71,23 +71,16 @@
 
 
 #ifdef PICO_SUPPORT_TCP
-#ifdef DEBUG_TCP_GENERAL
+
+//#define PICO_TCP_SUPPORT_SOCKET_STATS 1
+
 #define tcp_dbg              dbg
-#else
-#define tcp_dbg(...)         do {} while(0)
-#endif
 
-#ifdef DEBUG_TCP_NAGLE
 #define tcp_dbg_nagle        dbg
-#else
-#define tcp_dbg_nagle(...)   do {} while(0)
-#endif
 
-#ifdef DEBUG_TCP_OPTIONS
 #define tcp_dbg_options      dbg
-#else
-#define tcp_dbg_options(...) do {} while(0)
-#endif
+
+//#define dbg                   Debug_LOG_DEBUG
 
 #ifdef PICO_SUPPORT_MUTEX
 static void *Mutex = NULL;
@@ -212,6 +205,7 @@ static int32_t do_enqueue_segment(struct pico_tcp_queue *tq, void *f, uint16_t p
     if ((tq->size + payload_len) > tq->max_size)
     {
         ret = 0;
+        tcp_dbg("Queue is full! q: %p, tq->size: %zu, payload_len: %zu, max_size_queue: %zu, tq->frames: %zu", tq, tq->size, payload_len, tq->max_size, tq->frames);
         goto out;
     }
 
@@ -236,8 +230,10 @@ static int32_t pico_enqueue_segment(struct pico_tcp_queue *tq, void *f)
 {
     uint16_t payload_len;
 
-    if (!f)
+    if (!f) {
+        tcp_dbg("f == NULL");
         return -1;
+    }
 
     payload_len = enqueue_segment_len(tq, f);
 
@@ -999,6 +995,7 @@ static inline int tcp_send_try_enqueue(struct pico_socket_tcp *ts, struct pico_f
 
 }
 
+//#DEBUGTAG
 static int tcp_send(struct pico_socket_tcp *ts, struct pico_frame *f)
 {
     struct pico_tcp_hdr *hdr = (struct pico_tcp_hdr *) f->transport_hdr;
@@ -2995,7 +2992,10 @@ int pico_tcp_output(struct pico_socket *s, int loop_score)
     una = first_segment(&t->tcpq_out);
     f = peek_segment(&t->tcpq_out, t->snd_nxt);
 
+    Debug_LOG_DEBUG("pico_tcp_output: f: %p, &t->tcpq_out: %p, t->tcpq_out->frames: %zu, t->tcpq_out->size: %zu", f, &t->tcpq_out, t->tcpq_out.frames, t->tcpq_out.size);
+
     while((f) && (t->cwnd >= t->in_flight)) {
+        Debug_LOG_DEBUG("pico_tcp_output: Entering loop:  t->tcpq_out->frames: %zu, t->tcpq_out->size: %zu", t->tcpq_out.frames, t->tcpq_out.size);
         f->timestamp = TCP_TIME;
         add_retransmission_timer(t, t->rto + TCP_TIME);
         tcp_add_options_frame(t, f);
@@ -3005,7 +3005,9 @@ int pico_tcp_output(struct pico_socket *s, int loop_score)
             break;
         }
 
+        //This seems to be the breaking point, but I dont understand why
         /* Check if advertised window is full */
+        /*
         if ((uint32_t)seq_diff >= (uint32_t)(t->recv_wnd << t->recv_wnd_scale)) {
             if (t->x_mode != PICO_TCP_WINDOW_FULL) {
                 tcp_dbg("TCP> RIGHT SIZING (rwnd: %d, frame len: %d\n", t->recv_wnd << t->recv_wnd_scale, f->payload_len);
@@ -3013,10 +3015,14 @@ int pico_tcp_output(struct pico_socket *s, int loop_score)
                 t->snd_nxt = SEQN(una);
                 t->snd_retry = SEQN(una);
                 t->x_mode = PICO_TCP_WINDOW_FULL;
+            } else {
+                t->x_mode = 0
             }
 
             break;
-        }
+        } else {
+            Debug_LOG_DEBUG("pico_tcp_output: Advertising window full");
+        }*/
 
         /* Check if the advertised window is too small to receive the current frame */
         if ((uint32_t)(seq_diff + f->payload_len) > (uint32_t)(t->recv_wnd << t->recv_wnd_scale)) {
@@ -3028,6 +3034,8 @@ int pico_tcp_output(struct pico_socket *s, int loop_score)
             t->cwnd = (uint16_t)t->in_flight;
             if (t->cwnd < 1)
                 t->cwnd = 1;
+        } else {
+            Debug_LOG_DEBUG("pico_tcp_output: Advertising window too small");
         }
 
         tcp_dbg("TCP> DEQUEUED (for output) frame %08x, acks %08x len= %d, remaining frames %d\n", SEQN(f), ACKN(f), f->payload_len, t->tcpq_out.frames);
@@ -3035,8 +3043,10 @@ int pico_tcp_output(struct pico_socket *s, int loop_score)
         sent++;
         loop_score--;
         t->snd_last_out = SEQN(f);
-        if (loop_score < 1)
+        if (loop_score < 1) {
+            Debug_LOG_DEBUG("pico_tcp_output: noo loopscore left");
             break;
+        }
 
         if (f->payload_len > 0) {
             data_sent++;
@@ -3049,6 +3059,7 @@ int pico_tcp_output(struct pico_socket *s, int loop_score)
         rto_set(t, t->rto);
     } else {
         /* Nothing to transmit. */
+        Debug_LOG_DEBUG("pico_tcp_output: nothing too transmit");
     }
 
     if ((t->tcpq_out.frames == 0) && (s->state & PICO_SOCKET_STATE_SHUT_LOCAL)) {              /* if no more packets in queue, XXX replaced !f by tcpq check */
@@ -3065,8 +3076,10 @@ int pico_tcp_output(struct pico_socket *s, int loop_score);
 void pico_tcp_out_all(struct pico_stack *S, void *arg)
 {
     struct pico_socket_tcp *t = (struct pico_socket_tcp *)arg;
+    Debug_LOG_DEBUG("pico_tcp_out_all: trying to empty queue: t: %p, IADFO", t);
     (void)S;
     if (t) {
+        Debug_LOG_DEBUG("pico_tcp_out_all: here");
         struct pico_socket *s = &t->sock;
         pico_tcp_output(&t->sock, (int)t->tcpq_out.frames);
         if ((s->ev_pending) && s->wakeup) {
@@ -3151,7 +3164,7 @@ static int pico_tcp_push_nagle_enqueue(struct pico_socket_tcp *t, struct pico_fr
         pico_schedule_job(t->sock.stack, pico_tcp_out_all, t);
         return f->payload_len;
     } else {
-        tcp_dbg("Enqueue failed.\n");
+        tcp_dbg("pico_tcp_push_nagle_enqueue: Enqueue failed.\n");
         return 0;
     }
 }
@@ -3207,7 +3220,7 @@ static int pico_tcp_push_nagle_on(struct pico_socket_tcp *t, struct pico_frame *
 }
 
 
-
+// Push -> schiebt element in queue, dann wird das discarden veranlasst
 /* original behavior kept when Nagle disabled;
    Nagle algorithm added here, keeping hold frame queue instead of eg linked list of data */
 int pico_tcp_push(struct pico_stack *S, struct pico_protocol *self, struct pico_frame *f)
@@ -3235,7 +3248,8 @@ int pico_tcp_push(struct pico_stack *S, struct pico_protocol *self, struct pico_
             t->snd_last += f->payload_len;
             return f->payload_len;
         } else {
-            tcp_dbg("Enqueue failed.\n");
+            pico_tcp_out_all(S, t);
+            tcp_dbg("pico_tcp_push: Enqueue failed.\n");
             return 0;
         }
     } else {

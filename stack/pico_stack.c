@@ -452,6 +452,7 @@ MOCKABLE int pico_datalink_send(struct pico_frame *f)
         }
     } else {
         /* non-ethernet: no post-processing needed */
+        Debug_LOG_DEBUG("AOIDSA");
         return pico_sendto_dev(f);
     }
 }
@@ -558,6 +559,7 @@ int32_t pico_stack_recv_zerocopy_ext_buffer_notify(struct pico_device *dev, uint
     return _pico_stack_recv_zerocopy(dev, buffer, len, 1, notify_free);
 }
 
+//#DEBUGTAG enqueu into device
 int32_t pico_sendto_dev(struct pico_frame *f)
 {
     if (!f->dev) {

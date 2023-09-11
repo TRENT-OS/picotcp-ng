@@ -60,6 +60,7 @@ static int proto_loop_in(struct pico_stack *S, struct pico_protocol *proto, int 
 static int proto_loop_out(struct pico_stack *S, struct pico_protocol *proto, int loop_score)
 {
     struct pico_frame *f;
+    Debug_LOG_DEBUG("proto_loop_out: POIHASD, proto->q_out: %p", proto->q_out);
     while(loop_score > 0) {
         if (proto->q_out->frames == 0)
             break;

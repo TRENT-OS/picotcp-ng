@@ -160,18 +160,25 @@ static inline int32_t pico_enqueue(struct pico_queue *q, struct pico_frame *p)
 static inline struct pico_frame *pico_dequeue(struct pico_queue *q)
 {
     struct pico_frame *p = q->head;
-    if (!p)
+    if (!p) {
         return NULL;
+        //Debug_LOG_DEBUG("pico_dequeue: ");
+    }
 
-    if (q->frames < 1)
+    if (q->frames < 1) {
+        //Debug_LOG_DEBUG("pico_dequeue: ");
         return NULL;
+    }
+
 
     if (q->shared)
         PICOTCP_MUTEX_LOCK(q->mutex);
 
+
+    //Debug_LOG_DEBUG("pico_dequeue: q->size: %zu, q->frames: %zu, p->buffer_len: %zu, q->overhead: %zu", q->size, q->frames, p->buffer_len, q->overhead);
     q->head = p->next;
     q->frames--;
-    q->size -= p->buffer_len - q->overhead;
+    q->size = q->size - (p->buffer_len + q->overhead);
     if (q->head == NULL)
         q->tail = NULL;
 
@@ -180,7 +187,41 @@ static inline struct pico_frame *pico_dequeue(struct pico_queue *q)
     p->next = NULL;
     if (q->shared)
         PICOTCP_MUTEX_UNLOCK(q->mutex);
+    //Debug_LOG_DEBUG("pico_dequeue: q->size: %zu, q->frames %zu" q->size, q->frames);
+    return p;
+}
 
+static inline struct pico_frame *pico_dequeue_out(struct pico_queue *q)
+{
+    struct pico_frame *p = q->head;
+    if (!p) {
+        return NULL;
+        Debug_LOG_DEBUG("pico_dequeue: fail 1 ");
+    }
+
+    if (q->frames < 1) {
+        Debug_LOG_DEBUG("pico_dequeue: fail 2");
+        return NULL;
+    }
+
+
+    if (q->shared)
+        PICOTCP_MUTEX_LOCK(q->mutex);
+
+
+    Debug_LOG_DEBUG("q: %p, pico_dequeue: q->size: %zu, q->frames: %zu, p->buffer_len: %zu, q->overhead: %zu", q, q->size, q->frames, p->buffer_len, q->overhead);
+    q->head = p->next;
+    q->frames--;
+    q->size = q->size - (p->buffer_len + q->overhead);
+    if (q->head == NULL)
+        q->tail = NULL;
+
+    debug_q(q);
+
+    p->next = NULL;
+    if (q->shared)
+        PICOTCP_MUTEX_UNLOCK(q->mutex);
+    Debug_LOG_DEBUG("pico_dequeue: q->size: %zu, q->frames %zu", q->size, q->frames);
     return p;
 }
 

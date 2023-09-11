@@ -133,6 +133,7 @@ static int pico_ll_frame_sock_push(struct pico_stack *S, struct pico_protocol *s
 {
     (void)S;
     (void)self;
+    Debug_LOG_DEBUG("pico_ll_frame_sock_push: sending frame to dev: AOIDSA");
     return pico_sendto_dev(f);
 }
 

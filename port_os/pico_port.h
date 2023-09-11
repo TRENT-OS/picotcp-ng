@@ -10,7 +10,7 @@
 
 #include "lib_debug/Debug.h"
 
-#define dbg(...) Debug_LOG_TRACE(__VA_ARGS__)
+#define dbg(...) Debug_LOG_DEBUG(__VA_ARGS__)
 
 unsigned long os_pico_time_s(void);
 #define PICO_TIME() os_pico_time_s()

@@ -101,6 +101,7 @@ static struct pico_frame *pico_ethernet_alloc(struct pico_stack *S, struct pico_
     return f;
 }
 
+//#DEBUGTAG
 /* Interface: protocol definition */
 struct pico_protocol pico_proto_ethernet = {
     .name = "ethernet",
@@ -346,8 +347,10 @@ static int32_t pico_ethsend_bcast(struct pico_stack *S, struct pico_frame *f)
  * If the device driver is busy, we return 0, so the stack won't discard the frame.
  * In case of success, we can safely return 1.
  */
+//#DEBUG_TAG enqueuing stuff into the device queue
 static int32_t pico_ethsend_dispatch(struct pico_frame *f)
 {
+    Debug_LOG_DEBUG("pico_ethsend_dispatch: sending frame into device queue AOIDSA");
     return (pico_sendto_dev(f) > 0); // Return 1 on success, ret > 0
 }
 
