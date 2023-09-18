@@ -3006,6 +3006,7 @@ int pico_tcp_output(struct pico_socket *s, int loop_score)
         }
 
         /* Check if advertised window is full */
+        /*
         if ((uint32_t)seq_diff >= (uint32_t)(t->recv_wnd << t->recv_wnd_scale)) {
             if (t->x_mode != PICO_TCP_WINDOW_FULL) {
                 tcp_dbg("TCP> RIGHT SIZING (rwnd: %d, frame len: %d\n", t->recv_wnd << t->recv_wnd_scale, f->payload_len);
@@ -3016,7 +3017,7 @@ int pico_tcp_output(struct pico_socket *s, int loop_score)
             }
 
             break;
-        }
+        }*/
 
         /* Check if the advertised window is too small to receive the current frame */
         if ((uint32_t)(seq_diff + f->payload_len) > (uint32_t)(t->recv_wnd << t->recv_wnd_scale)) {
