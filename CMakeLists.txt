@@ -1,7 +1,9 @@
 #
 # picoTCP stack library
 #
-# Copyright (C) 2019-2021, HENSOLDT Cyber GmbH
+# Copyright (C) 2019-2024, HENSOLDT Cyber GmbH
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
 
 cmake_minimum_required(VERSION 3.7.2)
